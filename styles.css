@@ -1,0 +1,57 @@
+.password-toggle {
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: #6c757d;
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 10;
+    }
+    .password-toggle:hover,
+    .password-toggle:focus {
+      color: #495057;
+      box-shadow: none;
+    }
+    .input-group {
+      position: relative;
+    }
+    .input-group input[type="password"] {
+      border-radius: 0 0.375rem 0.375rem 0 !important;
+    }
+    .password-field {
+      position: relative;
+    }
+    .password-input {
+      padding-right: 45px !important;
+    }
+    .invalid-feedback {
+      display: block;
+    }
+    .validation-requirements {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.5rem;
+      padding: 12px 16px;
+      margin-top: 8px;
+      font-size: 0.875rem;
+    }
+    .validation-item {
+      display: flex;
+      align-items: center;
+      margin: 4px 0;
+      font-size: 0.85em;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .validation-item.valid {
+      color: #198754;
+    }
+    .validation-item.invalid {
+      color: #dc3545;
+    }
+    .validation-item i {
+      margin-right: 8px;
+      font-size: 0.9em;
+    }
