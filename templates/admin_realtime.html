@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Vehicle Parking System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        /* Custom styles for occupancy grid and modals */
+        .occupancy-grid { display: flex; flex-wrap: wrap; gap: 4px; }
+        .spot-box { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .spot-available { background: #e0ffe0; color: #2d7a2d; }
+        .spot-occupied { background: #ffe0e0; color: #a12d2d; }
+        .tab-content { margin-top: 24px; }
+        .nav-tabs .nav-link.active { background: #e3f2fd; border-color: #0d6efd #0d6efd #fff; }
+        .modal-header { background: #fff3cd; }
+        .modal-title { color: #856404; }
+        .summary-chart { min-height: 200px; }
+    </style>
+</head>
+<body>
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+        <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;"></div>
+    </div>
+    <div class="container-fluid mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold" style="color: #6c63ff;">Admin Functionalities</h3>
+            <button class="btn btn-outline-primary" id="editProfileBtn">Edit Profile</button>
+        </div>
+        <ul class="nav nav-tabs" id="adminTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab">Home</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" role="tab">Users</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab">Search</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">Summary</button>
+            </li>
+            <li class="nav-item ms-auto" role="presentation">
+                <button class="nav-link text-danger" id="logout-tab" type="button">Logout</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="adminTabContent">
+            <!-- Home Tab -->
+            <div class="tab-pane fade show active" id="home" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
+                    <h5>Parking Lots</h5>
+                    <button class="btn btn-warning" id="addLotBtn">+ Add Lot</button>
+                </div>
+                <div class="row" id="lotsContainer">
+                    <!-- Parking lot cards will be rendered here -->
+                </div>
+
+                <!-- Lot Details Modal -->
+                <div class="modal fade" id="lotDetailsModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content animate__animated animate__fadeInDown">
+                            <div class="modal-header" style="background:#fff3cd;">
+                                <h5 class="modal-title">Edit Parking Lot</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form>
+                                    <div class="mb-2">
+                                        <label class="form-label">Prime Location Name :</label>
+                                        <input type="text" class="form-control" id="modalLotName" readonly>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Address :</label>
+                                        <textarea class="form-control" id="modalLotAddress" readonly></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Pin code :</label>
+                                        <input type="text" class="form-control" id="modalLotPincode" readonly>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Price (per hour) :</label>
+                                        <input type="text" class="form-control" id="modalLotPrice" readonly>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Maximum spots :</label>
+                                        <input type="text" class="form-control" id="modalLotSpots" readonly>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Users Tab -->
+            <div class="tab-pane fade" id="users" role="tabpanel">
+                <h5 class="mt-3">Registered Users</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered mt-2">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>E_Mail</th>
+                                <th>Full name</th>
+                                <th>Address</th>
+                                <th>Pin code</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- User rows here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Search Tab -->
+            <div class="tab-pane fade" id="search" role="tabpanel">
+                <h5 class="mt-3">Search by</h5>
+                <div class="input-group mb-3 mt-2">
+                    <select class="form-select" id="searchBy">
+                        <option value="user">User ID</option>
+                        <option value="location">Parking Spot by Location</option>
+                    </select>
+                    <input type="text" class="form-control" id="searchString" placeholder="search string">
+                    <button class="btn btn-primary" id="searchBtn">Search</button>
+                </div>
+                <div id="searchResults">
+                    <!-- Example search results here -->
+                </div>
+            </div>
+            <!-- Summary Tab -->
+            <div class="tab-pane fade" id="summary" role="tabpanel">
+                <h5 class="mt-3">Summary shows <span class="fw-bold text-primary">statistical charts</span></h5>
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body summary-chart" id="revenueChart">
+                                <!-- Revenue chart here -->
+                            </div>
+                            <div class="card-footer text-center">Revenue from each parking lot</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body summary-chart" id="occupancyChart">
+                                <!-- Occupancy chart here -->
+                            </div>
+                            <div class="card-footer text-center">Summary on available and occupied parking lots</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Parking Lot Modal -->
+        <div class="modal fade" id="editLotModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Parking Lot</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editLotForm">
+                            <div class="mb-2">
+                                <label class="form-label">Prime Location Name:</label>
+                                <input type="text" class="form-control" id="editLotName" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Address:</label>
+                                <textarea class="form-control" id="editLotAddress" required></textarea>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Pin code:</label>
+                                <input type="text" class="form-control" id="editLotPincode" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Price (per hour):</label>
+                                <input type="number" class="form-control" id="editLotPrice" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Maximum spots:</label>
+                                <input type="number" class="form-control" id="editLotSpots" required>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary me-2">Update</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Parking Lot Modal -->
+        <div class="modal fade" id="newLotModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">New Parking Lot</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="newLotForm">
+                            <div class="mb-2">
+                                <label class="form-label">Prime Location Name:</label>
+                                <input type="text" class="form-control" id="newLotName" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Address:</label>
+                                <textarea class="form-control" id="newLotAddress" required></textarea>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Pin code:</label>
+                                <input type="text" class="form-control" id="newLotPincode" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Price (per hour):</label>
+                                <input type="number" class="form-control" id="newLotPrice" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Maximum spots:</label>
+                                <input type="number" class="form-control" id="newLotSpots" required>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary me-2">Add</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View/Delete Parking Spot Modal -->
+        <div class="modal fade" id="viewSpotModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content animate__animated animate__fadeInDown">
+                    <div class="modal-header" style="background:#fff3cd;">
+                        <h5 class="modal-title">Parking Spot Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="mb-2">
+                                <label class="form-label">ID :</label>
+                                <input type="text" class="form-control" id="viewSpotId" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Status :</label>
+                                <input type="text" class="form-control" id="viewSpotStatus" readonly>
+                            </div>
+                            <div id="occupiedFields" style="display:none;">
+                                <div class="mb-2">
+                                    <label class="form-label">Customer ID :</label>
+                                    <input type="text" class="form-control" id="viewSpotCustomerId" readonly>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Vehicle number :</label>
+                                    <input type="text" class="form-control" id="viewSpotVehicleNumber" readonly>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Date/time of parking :</label>
+                                    <input type="text" class="form-control" id="viewSpotDateTime" readonly>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Est. parking cost :</label>
+                                    <input type="text" class="form-control" id="viewSpotCost" readonly>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Occupied Parking Spot Details Modal -->
+        <div class="modal fade" id="occupiedSpotModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Occupied Parking Spot Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form>
+                            <div class="mb-2">
+                                <label class="form-label">ID:</label>
+                                <input type="text" class="form-control" id="occupiedSpotId" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Customer ID:</label>
+                                <input type="text" class="form-control" id="occupiedCustomerId" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Vehicle number:</label>
+                                <input type="text" class="form-control" id="occupiedVehicleNumber" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Date/time of parking:</label>
+                                <input type="text" class="form-control" id="occupiedDateTime" readonly>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Est. parking cost:</label>
+                                <input type="text" class="form-control" id="occupiedCost" readonly>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/admin_dashboard.js"></script>
+</body>
+</html> 

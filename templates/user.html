@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom mb-4">
+    <div class="container-fluid">
+            <a class="navbar-brand text-primary" href="#">Parking App</a>
+            <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#" id="logoutBtn">Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+    <div class="container">
+        <h2 class="mb-4 text-center text-primary">Welcome, <span id="userName"></span>!</h2>
+        <!-- Search Section -->
+        <section id="searchSection" class="mb-5">
+            <h4>Search Parking Lots</h4>
+            <div class="row g-2 align-items-center mb-3">
+                <div class="col-auto">
+                    <select class="form-select" id="searchType">
+                        <option value="name">Name</option>
+                        <option value="address">Address</option>
+                        <option value="pin_code">Pin Code</option>
+                    </select>
+                </div>
+                <div class="col-auto flex-grow-1">
+                    <input type="text" class="form-control" id="searchQuery" placeholder="Enter search term">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" id="searchLotBtn">Search</button>
+                </div>
+            </div>
+            <div id="searchResults">
+                <!-- Search results will be loaded here by JS -->
+            </div>
+        </section>
+        <!-- Reserve Section -->
+        <section id="reserveSection" class="mb-5">
+            <h4>Reserve a Parking Spot</h4>
+            <div class="mb-3">
+                <label for="lotSelect" class="form-label">Select Parking Lot:</label>
+                <select class="form-select" id="lotSelect"></select>
+            </div>
+            <div class="mb-3">
+                <label for="vehicleNumber" class="form-label">Vehicle Number:</label>
+                <input type="text" class="form-control" id="vehicleNumber" placeholder="Enter your vehicle number" required>
+            </div>
+            <button class="btn btn-success" id="reserveBtn">Reserve Spot</button>
+            <div id="reserveMsg" class="mt-2"></div>
+        </section>
+        <!-- Vacate Section -->
+        <section id="vacateSection" class="mb-5" style="display:none;">
+            <h4>Your Current Reservation</h4>
+            <div id="currentReservation"></div>
+            <button class="btn btn-danger" id="vacateBtn">Vacate Spot</button>
+            <div id="vacateMsg" class="mt-2"></div>
+        </section>
+        <!-- Summary Section -->
+        <section id="summarySection">
+            <h4>Parking Summary</h4>
+        <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+              <tr>
+                            <th>Lot Name</th>
+                            <th>Spot</th>
+                            <th>Vehicle</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Duration</th>
+              </tr>
+            </thead>
+                    <tbody id="summaryTableBody">
+                        <!-- Reservations will be loaded here by JS -->
+            </tbody>
+          </table>
+            </div>
+        </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="/static/user_realtime.js"></script>
+</body>
+</html>
