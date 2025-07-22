@@ -286,3 +286,47 @@ body, .parking-lot-card, .add-lot-btn-fancy, .parking-lot-header, .parking-lot-a
     color: #fd7e14;
     text-shadow: 0 2px 8px #ffd180;
 }
+
+/* Password Toggle Styles */
+.password-toggle {
+    border: none;
+    background: none;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 10;
+}
+
+.password-toggle:hover {
+    color: #495057;
+}
+
+.password-field {
+    position: relative;
+}
+
+/* Mobile Number Field Styles */
+input[type="tel"] {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Responsive Navbar Improvements */
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+    
+    .nav-item {
+        padding: 0.5rem 0;
+    }
+}
+
+/* Login Form Mobile Number Validation */
+.login-note {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-align: center;
+    margin-bottom: 1rem;
+}

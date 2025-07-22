@@ -18,10 +18,10 @@
                         <form id="loginForm" novalidate>
                             <div class="mb-3">
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
-                                    <input type="email" class="form-control" id="email" placeholder="Enter your email" required>
+                                    <span class="input-group-text"><i class="bi bi-phone-fill"></i></span>
+                                    <input type="tel" class="form-control" id="mobile" placeholder="Enter your mobile number" pattern="[0-9]{10}" required>
                                 </div>
-                                <small id="emailError" class="text-danger"></small>
+                                <small id="mobileError" class="text-danger"></small>
                             </div>
                             <div class="mb-3">
                                 <div class="input-group">
@@ -63,30 +63,30 @@
         }
 
         function validateLogin() {
-            const emailField = document.getElementById('email');
+            const mobileField = document.getElementById('mobile');
             const passwordField = document.getElementById('password');
-            const emailError = document.getElementById('emailError');
+            const mobileError = document.getElementById('mobileError');
             const passwordError = document.getElementById('passwordError');
 
             let isValid = true;
 
             // Clear previous errors
-            emailError.textContent = '';
+            mobileError.textContent = '';
             passwordError.textContent = '';
-            emailField.classList.remove('is-invalid');
+            mobileField.classList.remove('is-invalid');
             passwordField.classList.remove('is-invalid');
 
-            // Email validation
-            const email = emailField.value.trim();
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            // Mobile validation
+            const mobile = mobileField.value.trim();
+            const mobileRegex = /^[0-9]{10}$/;
 
-            if (!email) {
-                emailError.textContent = 'Email is required';
-                emailField.classList.add('is-invalid');
+            if (!mobile) {
+                mobileError.textContent = 'Mobile number is required';
+                mobileField.classList.add('is-invalid');
                 isValid = false;
-            } else if (!emailRegex.test(email)) {
-                emailError.textContent = 'Enter a valid email address';
-                emailField.classList.add('is-invalid');
+            } else if (!mobileRegex.test(mobile)) {
+                mobileError.textContent = 'Enter a valid 10-digit mobile number';
+                mobileField.classList.add('is-invalid');
                 isValid = false;
             }
 
@@ -112,7 +112,7 @@
             if (!validateLogin()) return;
 
             const data = {
-                email: document.getElementById('email').value,
+                mobile: document.getElementById('mobile').value,
                 password: document.getElementById('password').value
             };
 
@@ -144,6 +144,13 @@
                 console.error('There was a problem with the fetch operation:', error);
                 alert('Network error');
             }
+        });
+
+        // Add mobile number input validation
+        const mobileInput = document.getElementById('mobile');
+        mobileInput.addEventListener('input', function() {
+            const mobileValue = this.value.replace(/\D/g, ''); // Remove non-digits
+            this.value = mobileValue.slice(0, 10); // Limit to 10 digits
         });
 
     </script>

@@ -33,6 +33,14 @@
               </div>
 
               <div class="mb-3">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-phone-fill"></i></span>
+                  <input type="tel" class="form-control" id="mobile" placeholder="Enter your mobile number" pattern="[0-9]{10}" required />
+                </div>
+                <div class="invalid-feedback" id="mobileError"></div>
+              </div>
+
+              <div class="mb-3">
                 <div class="input-group password-field">
                   <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
                   <input type="password" class="form-control" id="password" placeholder="Enter your password" required />
@@ -104,6 +112,7 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
     const data = {
         full_name: document.getElementById('fullName').value,
         email: document.getElementById('email').value,
+        mobile: document.getElementById('mobile').value,
         password: document.getElementById('password').value,
         address: document.getElementById('address').value,
         pin_code: document.getElementById('pincode').value
@@ -187,6 +196,24 @@ function togglePassword(fieldId, button) {
         icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
     }
 }
+
+// Add mobile number validation
+const mobileInput = document.getElementById('mobile');
+mobileInput.addEventListener('input', function() {
+    const mobileValue = this.value.replace(/\D/g, ''); // Remove non-digits
+    this.value = mobileValue.slice(0, 10); // Limit to 10 digits
+});
+
+mobileInput.addEventListener('blur', function() {
+    const mobileError = document.getElementById('mobileError');
+    if (this.value && this.value.length !== 10) {
+        mobileError.textContent = 'Mobile number must be exactly 10 digits';
+        this.classList.add('is-invalid');
+    } else {
+        mobileError.textContent = '';
+        this.classList.remove('is-invalid');
+    }
+});
 </script>
 </body>
 </html>
