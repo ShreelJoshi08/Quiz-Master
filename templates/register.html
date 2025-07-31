@@ -26,16 +26,8 @@
 
               <div class="mb-3">
                 <div class="input-group">
-                  <span class="input-group-text"><i class="bi bi-envelope-fill"></i></span>
-                  <input type="email" class="form-control" id="email" placeholder="Enter your email" required />
-                </div>
-                <div class="invalid-feedback" id="emailError"></div>
-              </div>
-
-              <div class="mb-3">
-                <div class="input-group">
                   <span class="input-group-text"><i class="bi bi-phone-fill"></i></span>
-                  <input type="tel" class="form-control" id="mobile" placeholder="Enter your mobile number" pattern="[0-9]{10}" required />
+                  <input type="text" class="form-control" id="mobile" placeholder="Enter your mobile number" pattern="[0-9]{10}" required />
                 </div>
                 <div class="invalid-feedback" id="mobileError"></div>
               </div>
@@ -95,7 +87,7 @@
               <button type="submit" class="btn btn-primary w-100">Register</button>
             </form>
             <p class="text-center mt-3">
-              Already have an account? <a href="login.html">Login here</a>
+              Already have an account? <a href="/">Login here</a>
             </p>
           </div>
         </div>
@@ -107,12 +99,16 @@
   <script>
 document.getElementById('registrationForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateRegistrationForm()) {
+        return;
+    }
 
     // Collect form data
     const data = {
         full_name: document.getElementById('fullName').value,
-        email: document.getElementById('email').value,
-        mobile: document.getElementById('mobile').value,
+        mobile_number: document.getElementById('mobile').value,
         password: document.getElementById('password').value,
         address: document.getElementById('address').value,
         pin_code: document.getElementById('pincode').value
@@ -127,13 +123,97 @@ document.getElementById('registrationForm').addEventListener('submit', async fun
 
     const result = await response.json();
     if (response.ok) {
-        alert('Registration successful!');
-        // Redirect to user dashboard
-        window.location.href = '/user.html';
+        alert('Registration successful! Please login with your credentials.');
+        // Redirect to login page
+        window.location.href = '/';
     } else {
         alert(result.error || 'Registration failed');
     }
 });
+
+function validateRegistrationForm() {
+    let isValid = true;
+    
+    // Clear all previous errors
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    document.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+    
+    // Validate full name
+    const fullName = document.getElementById('fullName').value.trim();
+    if (!fullName) {
+        document.getElementById('fullNameError').textContent = 'Full name is required';
+        document.getElementById('fullName').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate mobile number
+    const mobile = document.getElementById('mobile').value.trim();
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobile) {
+        document.getElementById('mobileError').textContent = 'Mobile number is required';
+        document.getElementById('mobile').classList.add('is-invalid');
+        isValid = false;
+    } else if (!mobileRegex.test(mobile)) {
+        document.getElementById('mobileError').textContent = 'Mobile number must be exactly 10 digits';
+        document.getElementById('mobile').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate password
+    const password = document.getElementById('password').value;
+    if (!password) {
+        document.getElementById('passwordError').textContent = 'Password is required';
+        document.getElementById('password').classList.add('is-invalid');
+        isValid = false;
+    } else {
+        // Check password requirements
+        const hasLength = password.length >= 8;
+        const hasUpper = /[A-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSpecial = /[^A-Za-z0-9]/.test(password);
+        
+        if (!hasLength || !hasUpper || !hasNumber || !hasSpecial) {
+            document.getElementById('passwordError').textContent = 'Password must meet all requirements';
+            document.getElementById('password').classList.add('is-invalid');
+            isValid = false;
+        }
+    }
+    
+    // Validate confirm password
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if (!confirmPassword) {
+        document.getElementById('confirmPasswordError').textContent = 'Please confirm your password';
+        document.getElementById('confirmPassword').classList.add('is-invalid');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        document.getElementById('confirmPasswordError').textContent = 'Passwords do not match';
+        document.getElementById('confirmPassword').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate address
+    const address = document.getElementById('address').value.trim();
+    if (!address) {
+        document.getElementById('addressError').textContent = 'Address is required';
+        document.getElementById('address').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    // Validate pincode
+    const pincode = document.getElementById('pincode').value.trim();
+    const pincodeRegex = /^[0-9]{6}$/;
+    if (!pincode) {
+        document.getElementById('pincodeError').textContent = 'Pincode is required';
+        document.getElementById('pincode').classList.add('is-invalid');
+        isValid = false;
+    } else if (!pincodeRegex.test(pincode)) {
+        document.getElementById('pincodeError').textContent = 'Pincode must be exactly 6 digits';
+        document.getElementById('pincode').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    return isValid;
+}
 
 const passwordInput = document.getElementById('password');
 const lengthCriteria = document.getElementById('lengthCheck');

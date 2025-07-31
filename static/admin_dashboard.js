@@ -4,10 +4,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tab switching (Bootstrap handles, but we can add logic if needed)
     // Load initial data for Home tab
     loadParkingLots();
+    // Load initial summary charts
+    renderSummaryCharts();
     // Users tab
     document.getElementById('users-tab').addEventListener('click', loadUsers);
     // Search tab
     document.getElementById('searchBtn').addEventListener('click', handleSearch);
+    // Add Enter key support for search
+    document.getElementById('searchString').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleSearch();
+        }
+    });
     // Summary tab
     document.getElementById('summary-tab').addEventListener('click', function() {
         renderSummaryCharts();
@@ -93,12 +101,20 @@ function loadParkingLots() {
 }
 
 function addParkingLot() {
+    const maxSpots = parseInt(document.getElementById('newLotSpots').value);
+    
+    // Validate max spots limit
+    if (maxSpots < 1 || maxSpots > 10) {
+        showToast('Maximum spots must be between 1 and 10', 'error');
+        return;
+    }
+    
     const data = {
         location_name: document.getElementById('newLotName').value,
         address: document.getElementById('newLotAddress').value,
         pin_code: document.getElementById('newLotPincode').value,
         price: document.getElementById('newLotPrice').value,
-        max_spots: document.getElementById('newLotSpots').value
+        max_spots: maxSpots
     };
     fetch('/api/admin/lots', {
         method: 'POST',
@@ -132,6 +148,13 @@ function showEditLotModal(lotId) {
 function updateParkingLot() {
     const lotId = document.getElementById('editLotForm').getAttribute('data-lot-id');
     const newMaxSpots = parseInt(document.getElementById('editLotSpots').value);
+    
+    // Validate max spots limit
+    if (newMaxSpots < 1 || newMaxSpots > 10) {
+        showToast('Maximum spots must be between 1 and 10', 'error');
+        return;
+    }
+    
     fetch(`/api/admin/lots`)
         .then(res => res.json())
         .then(data => {
@@ -203,13 +226,23 @@ function updateParkingLot() {
 }
 
 function deleteLot(lotId) {
-    if (confirm('Are you sure you want to delete this parking lot?')) {
-        fetch(`/api/admin/lots/${lotId}`, { method: 'DELETE' })
-            .then(() => {
-                loadParkingLots();
-                renderSummaryCharts();
-            });
-    }
+    // First fetch the lot details to check if any slot is occupied
+    fetch('/api/admin/lots')
+        .then(res => res.json())
+        .then(data => {
+            const lot = data.lots.find(l => l.id === lotId);
+            if (lot && lot.occupied > 0) {
+                alert('In this lot slot is occupied you can not delete this lot');
+                return;
+            }
+            if (confirm('Are you sure you want to delete this parking lot?')) {
+                fetch(`/api/admin/lots/${lotId}`, { method: 'DELETE' })
+                    .then(() => {
+                        loadParkingLots();
+                        renderSummaryCharts();
+                    });
+            }
+        });
 }
 
 function editLot(lotId) {
@@ -271,11 +304,12 @@ function showOccupiedSpotModal(spotId) {
         });
 }
 
-function showToast(message) {
+function showToast(message, type = 'success') {
     const toastContainer = document.getElementById('toastContainer');
     const toastId = 'toast' + Date.now();
     const toast = document.createElement('div');
-    toast.className = 'toast align-items-center text-bg-success border-0 show';
+    const bgClass = type === 'error' ? 'text-bg-danger' : 'text-bg-success';
+    toast.className = `toast align-items-center ${bgClass} border-0 show`;
     toast.id = toastId;
     toast.setAttribute('role', 'alert');
     toast.setAttribute('aria-live', 'assertive');
@@ -287,7 +321,7 @@ function showToast(message) {
         </div>
     `;
     toastContainer.appendChild(toast);
-    const bsToast = new bootstrap.Toast(toast, { delay: 2000 });
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
     bsToast.show();
     toast.addEventListener('hidden.bs.toast', () => {
         toast.remove();
@@ -318,21 +352,61 @@ function loadUsers() {
 // --- Search ---
 function handleSearch() {
     const by = document.getElementById('searchBy').value;
-    const str = document.getElementById('searchString').value;
+    const str = document.getElementById('searchString').value.trim();
+    const results = document.getElementById('searchResults');
+    
+    // Validate input
+    if (!str) {
+        results.innerHTML = '<div class="alert alert-warning">Please enter a search term.</div>';
+        return;
+    }
+    
+    // Show loading state
+    results.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Searching...</span></div></div>';
+    
     fetch(`/api/admin/search?by=${by}&q=${encodeURIComponent(str)}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
-            const results = document.getElementById('searchResults');
             results.innerHTML = '';
             if (data.results && data.results.length > 0) {
                 data.results.forEach(item => {
-                    results.innerHTML += `<div class="card mb-2 p-2">${item}</div>`;
+                    results.innerHTML += item; // Remove the extra div wrapper since HTML is already formatted
                 });
             } else {
-                results.innerHTML = '<div class="text-muted">No results found.</div>';
+                results.innerHTML = '<div class="alert alert-info">No results found for your search.</div>';
             }
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            results.innerHTML = '<div class="alert alert-danger">An error occurred while searching. Please try again.</div>';
         });
 }
+
+// Update search placeholder based on selected search type
+function updateSearchPlaceholder() {
+    const searchBy = document.getElementById('searchBy').value;
+    const searchInput = document.getElementById('searchString');
+    
+    if (searchBy === 'user') {
+        searchInput.placeholder = 'Enter user ID (e.g., 1, 2, 3...)';
+    } else if (searchBy === 'location') {
+        searchInput.placeholder = 'Enter location, address, or pin code (e.g., Velachery, Chennai, 600042)';
+    }
+    
+    // Clear previous search results when changing search type
+    document.getElementById('searchResults').innerHTML = '';
+}
+
+// Chart instances to track for updates
+let revenueChart = null;
+let occupancyChart = null;
+let utilizationChart = null;
+let activityChart = null;
 
 // --- Summary Charts ---
 function renderSummaryCharts() {
@@ -340,41 +414,327 @@ function renderSummaryCharts() {
         fetch('/api/admin/summary?ts=' + Date.now())
             .then(res => res.json())
             .then(data => {
-                // Prepare data for charts
-                const lot_names = data.revenue.map(lot => lot.location_name);
-                const revenues = data.revenue.map(lot => lot.revenue);
-                let total_occupied = 0, total_vacant = 0;
-                data.occupancy.forEach(lot => {
-                    total_occupied += lot.occupied;
-                    total_vacant += lot.available;
-                });
-
-                // Revenue chart
-                const revCtx = document.getElementById('revenueChart').getContext('2d');
-                if (window.revenueChart) window.revenueChart.destroy();
-                window.revenueChart = new Chart(revCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: lot_names,
-                        datasets: [{ data: revenues, backgroundColor: ['#1976d2', '#ffc107', '#17a2b8', '#dc3545', '#6c757d', '#28a745', '#fd7e14'] }]
-                    },
-                    options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' }
-                });
-
-                // Occupancy chart
-                const occCtx = document.getElementById('occupancyChart').getContext('2d');
-                if (window.occupancyChart) window.occupancyChart.destroy();
-                window.occupancyChart = new Chart(occCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Occupied', 'Vacant'],
-                        datasets: [{ label: 'Spots', data: [total_occupied, total_vacant], backgroundColor: ['#1976d2', '#17a2b8'] }]
-                    },
-                    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, precision: 0 } } }
-                });
+                // Update statistics cards
+                updateStatisticsCards(data);
+                
+                // Update all charts
+                updateRevenueChart(data);
+                updateOccupancyChart(data);
+                updateUtilizationChart(data);
+                updateActivityChart(data);
+            })
+            .catch(error => {
+                console.error('Error loading summary data:', error);
+                showEmptyCharts();
             });
     } else {
-        document.getElementById('revenueChart').innerHTML = '<div class="chart-placeholder pie-chart"></div>';
-        document.getElementById('occupancyChart').innerHTML = '<div class="chart-placeholder bar-chart"></div>';
+        showEmptyCharts();
     }
+}
+
+function updateStatisticsCards(data) {
+    // Calculate totals
+    const totalLots = data.revenue ? data.revenue.length : 0;
+    const totalRevenue = data.revenue ? data.revenue.reduce((sum, lot) => sum + lot.revenue, 0) : 0;
+    let totalOccupied = 0, totalVacant = 0;
+    
+    if (data.occupancy) {
+        data.occupancy.forEach(lot => {
+            totalOccupied += lot.occupied;
+            totalVacant += lot.available;
+        });
+    }
+    
+    // Update DOM
+    document.getElementById('totalLots').textContent = totalLots;
+    document.getElementById('totalRevenue').textContent = `₹${totalRevenue.toLocaleString()}`;
+    document.getElementById('totalOccupied').textContent = totalOccupied;
+    document.getElementById('totalVacant').textContent = totalVacant;
+}
+
+function updateRevenueChart(data) {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    if (revenueChart) {
+        revenueChart.destroy();
+    }
+    
+    if (!data.revenue || data.revenue.length === 0) {
+        revenueChart = createEmptyChart(ctx, 'No revenue data available');
+        return;
+    }
+    
+    const lot_names = data.revenue.map(lot => lot.location_name);
+    const revenues = data.revenue.map(lot => lot.revenue);
+    const colors = generateColors(lot_names.length);
+    
+    revenueChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: lot_names,
+            datasets: [{
+                data: revenues,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${context.label}: ₹${context.parsed.toLocaleString()} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+function updateOccupancyChart(data) {
+    const ctx = document.getElementById('occupancyChart').getContext('2d');
+    
+    if (occupancyChart) {
+        occupancyChart.destroy();
+    }
+    
+    if (!data.occupancy || data.occupancy.length === 0) {
+        occupancyChart = createEmptyChart(ctx, 'No occupancy data available');
+        return;
+    }
+    
+    let totalOccupied = 0, totalVacant = 0;
+    data.occupancy.forEach(lot => {
+        totalOccupied += lot.occupied;
+        totalVacant += lot.available;
+    });
+    
+    occupancyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Occupied', 'Vacant'],
+            datasets: [{
+                label: 'Number of Spots',
+                data: [totalOccupied, totalVacant],
+                backgroundColor: ['rgba(220, 53, 69, 0.8)', 'rgba(40, 167, 69, 0.8)'],
+                borderColor: ['rgba(220, 53, 69, 1)', 'rgba(40, 167, 69, 1)'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = totalOccupied + totalVacant;
+                            const percentage = ((context.parsed.y / total) * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed.y} spots (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateUtilizationChart(data) {
+    const ctx = document.getElementById('utilizationChart').getContext('2d');
+    
+    if (utilizationChart) {
+        utilizationChart.destroy();
+    }
+    
+    if (!data.occupancy || data.occupancy.length === 0) {
+        utilizationChart = createEmptyChart(ctx, 'No utilization data available');
+        return;
+    }
+    
+    const lotNames = data.occupancy.map(lot => lot.location_name);
+    const utilizationRates = data.occupancy.map(lot => {
+        const total = lot.occupied + lot.available;
+        return total > 0 ? ((lot.occupied / total) * 100).toFixed(1) : 0;
+    });
+    
+    utilizationChart = new Chart(ctx, {
+        type: 'horizontalBar',
+        data: {
+            labels: lotNames,
+            datasets: [{
+                label: 'Utilization Rate (%)',
+                data: utilizationRates,
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed.x}% utilized`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateActivityChart(data) {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    
+    if (activityChart) {
+        activityChart.destroy();
+    }
+    
+    // Generate mock daily activity data (in a real app, this would come from the API)
+    const last7Days = [];
+    const activityData = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        last7Days.push(date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+        // Mock data - in real app, calculate from actual reservations
+        activityData.push(Math.floor(Math.random() * 20) + 5);
+    }
+    
+    activityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last7Days,
+            datasets: [{
+                label: 'Daily Reservations',
+                data: activityData,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createEmptyChart(ctx, message) {
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['No Data'],
+            datasets: [{
+                data: [0],
+                backgroundColor: 'rgba(201, 203, 207, 0.8)',
+                borderColor: 'rgba(201, 203, 207, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                y: { display: false },
+                x: { display: false }
+            }
+        }
+    });
+}
+
+function showEmptyCharts() {
+    const chartIds = ['revenueChart', 'occupancyChart', 'utilizationChart', 'activityChart'];
+    
+    chartIds.forEach(chartId => {
+        const ctx = document.getElementById(chartId).getContext('2d');
+        createEmptyChart(ctx, 'No data available');
+    });
+    
+    // Reset statistics
+    document.getElementById('totalLots').textContent = '0';
+    document.getElementById('totalRevenue').textContent = '₹0';
+    document.getElementById('totalOccupied').textContent = '0';
+    document.getElementById('totalVacant').textContent = '0';
+}
+
+function generateColors(count) {
+    const colors = [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 205, 86, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)',
+        'rgba(255, 159, 64, 0.8)',
+        'rgba(199, 199, 199, 0.8)',
+        'rgba(83, 102, 255, 0.8)'
+    ];
+    
+    const result = [];
+    for (let i = 0; i < count; i++) {
+        result.push(colors[i % colors.length]);
+    }
+    return result;
 }

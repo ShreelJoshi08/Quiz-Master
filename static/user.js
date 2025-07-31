@@ -1,4 +1,83 @@
+function reserveSpot() {
+    const userId = localStorage.getItem('user_id');
+    const lotId = document.getElementById('lotSelect').value;
+    const vehicleNumber = document.getElementById('vehicleNumber').value.trim().toUpperCase();
+
+    // List of valid state and UT codes
+    const stateCodes = [
+        "AN","AP","AR","AS","BR","CH","CG","DD","DL","DN","GA","GJ","HP","HR","JH",
+        "JK","KA","KL","LA","LD","MH","ML","MN","MP","MZ","NL","OD","PB","PY","RJ",
+        "SK","TN","TS","TR","UP","UK","WB"
+    ];
+    
+    // Create dynamic regex for state codes
+    const stateRegex = stateCodes.join("|");
+
+    // Comprehensive Indian vehicle number validation
+    const vehiclePatterns = [
+        // Civilian vehicles (PAN India, strict state code check)
+        new RegExp(`^(${stateRegex})[ -]?(0[1-9]|[1-9][0-9])[ -]?[A-Z]{1,3}[ -]?(?!0000)[0-9]{1,4}$`),
+
+        // Temporary registration: TR/TC
+        /^TR[ -]?(0[1-9]|[1-9][0-9])[ -]?TC[ -]?[0-9]{1,4}$/i,
+
+        // Diplomatic / Consular Corps
+        /^CC[ -]?[0-9]{1,3}[ -]?[0-9]{1,4}$/,
+        /^DC[ -]?[0-9]{1,3}[ -]?[0-9]{1,4}$/i,
+
+        // Military plates
+        /^[0-9]{2}[A-Z]{1}[0-9]{1,6}[A-Z]{1}$/,
+
+        // Vintage
+        new RegExp(`^(${stateRegex})[ -]?(0[1-9]|[1-9][0-9])[ -]?[A-Z]{2}[ -]?[0-9]{4}$`)
+    ];
+
+    if (!lotId || lotId === '__search__') {
+        alert('Please select a parking lot');
+        return;
+    }
+    if (!vehicleNumber) {
+        alert('Please enter your vehicle number');
+        return;
+    }
+
+    // Validate against all patterns
+    const isValidFormat = vehiclePatterns.some(pattern => pattern.test(vehicleNumber));
+    if (!isValidFormat) {
+        alert('Invalid vehicle number.\nExamples: MH12AB1234, DL8CAF2023, TR01TC1234, CC12 1234');
+        return;
+    }
+
+    fetch('/api/user/reserve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            user_id: userId, 
+            lot_id: lotId, 
+            vehicle_number: vehicleNumber 
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('reserveMsg').textContent = data.error;
+        } else {
+            document.getElementById('reserveMsg').textContent = 'Spot reserved successfully!';
+            document.getElementById('vehicleNumber').value = '';
+            checkActiveReservation();
+            loadSummary();
+            refreshLots(); // Use refreshLots to maintain search state
+        }
+    })
+    .catch(error => {
+        document.getElementById('reserveMsg').textContent = 'Error reserving spot. Please try again.';
+    });
+}
+
 // user.js
+
+// Global variable to store last search parameters
+let lastSearchParams = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     // Assume user_id and user_name are stored in localStorage after login
@@ -29,6 +108,7 @@ function loadLots(lotsData) {
     searchOpt.value = '__search__';
     searchOpt.textContent = '🔍 Search Lots...';
     lotSelect.appendChild(searchOpt);
+    
     if (lotsData) {
         lotsData.forEach(lot => {
             const opt = document.createElement('option');
@@ -56,73 +136,114 @@ function loadLots(lotsData) {
     };
 }
 
+// New function to refresh lots with current search or load all
+function refreshLots() {
+    if (lastSearchParams) {
+        // If we have search parameters, refresh the search results
+        fetch(`/api/user/lots/search?${lastSearchParams.toString()}`)
+            .then(res => res.json())
+            .then(data => {
+                loadLots(data.lots);
+            })
+            .catch(error => {
+                console.error('Error refreshing search results:', error);
+                // Fallback to loading all lots
+                loadLots();
+            });
+    } else {
+        // No search active, load all lots
+        loadLots();
+    }
+}
+
 function searchLotsPrompt() {
     const location = prompt('Enter location (leave blank to skip):') || '';
     const pincode = prompt('Enter pincode (leave blank to skip):') || '';
     const name = prompt('Enter lot name (leave blank to skip):') || '';
     const availableOnly = confirm('Show only lots with available spots?');
-    // If all blank and not filtering, reload all
+    
+    // If all blank and not filtering, clear search and reload all
     if (!location && !pincode && !name && !availableOnly) {
+        lastSearchParams = null; // Clear search parameters
         loadLots();
-          return;
-        }
+        return;
+    }
+    
     const params = new URLSearchParams();
     if (location) params.append('location', location);
     if (pincode) params.append('pincode', pincode);
     if (name) params.append('name', name);
     if (availableOnly) params.append('available_only', 'true');
+    
+    // Store search parameters for future refreshes
+    lastSearchParams = params;
+    
     fetch(`/api/user/lots/search?${params.toString()}`)
         .then(res => res.json())
         .then(data => {
             loadLots(data.lots);
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            alert('Error searching lots. Please try again.');
         });
 }
 
-function reserveSpot() {
-    const userId = localStorage.getItem('user_id');
-    const lotId = document.getElementById('lotSelect').value;
-    const vehicleNumber = document.getElementById('vehicleNumber').value.trim().toUpperCase();
+// function reserveSpot() {
+//     const userId = localStorage.getItem('user_id');
+//     const lotId = document.getElementById('lotSelect').value;
+//     const vehicleNumber = document.getElementById('vehicleNumber').value.trim().toUpperCase();
 
-    // Vehicle number validation: GJ(01-33)(A-Z)(A-Z)(0001-9999, not 0000)
-    const vehicleRegex = /^GJ(0[1-9]|1[0-9]|2[0-9]|3[0-3])[A-Z]{2}(?!0000)\d{4}$/;
-    if (!lotId || lotId === '__search__') {
-        alert('Please select a parking lot');
-        return;
-    }
-    if (!vehicleNumber) {
-        alert('Please enter your vehicle number');
-        return;
-    }
-    if (!vehicleRegex.test(vehicleNumber)) {
-        alert('Vehicle number must be in format: GJ01AA0001 to GJ33ZZ9999 (not 0000)');
-        return;
-    }
+//     // Simplified Indian vehicle number validation pattern to accept all states:
+//     // Format: Two letters (state), 1-2 digits (RTO), 1-2 letters, 4 digits
+//     const vehiclePatterns = [
+//         /^[A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{4}$/  // e.g. GJ01AB1234, MH12CD5678, DL8CAF2023
+//     ];
     
-    fetch('/api/user/reserve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            user_id: userId, 
-            lot_id: lotId, 
-            vehicle_number: vehicleNumber 
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById('reserveMsg').textContent = data.error;
-        } else {
-            document.getElementById('reserveMsg').textContent = 'Spot reserved successfully!';
-            document.getElementById('vehicleNumber').value = '';
-            checkActiveReservation();
-            loadSummary();
-            loadLots();
-        }
-    })
-    .catch(error => {
-        document.getElementById('reserveMsg').textContent = 'Error reserving spot. Please try again.';
-    });
-}
+//     if (!lotId || lotId === '__search__') {
+//         alert('Please select a parking lot');
+//         return;
+//     }
+//     if (!vehicleNumber) {
+//         alert('Please enter your vehicle number');
+//         return;
+//     }
+    
+//     // Check if vehicle number matches any Indian format
+//     const isValidFormat = vehiclePatterns.some(pattern => pattern.test(vehicleNumber));
+//     if (!isValidFormat) {
+//         // Remove or simplify the alert message as per user request
+//         // alert('Please enter a valid Indian vehicle number (e.g., GJ01AB1234, MH12CD5678, DL8CAF2023, etc.)');
+//         // Instead of alert, show message in reserveMsg element
+//         document.getElementById('reserveMsg').textContent = 'Invalid vehicle number format. Please check and try again.';
+//         return;
+//     }
+    
+//     fetch('/api/user/reserve', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify({ 
+//             user_id: userId, 
+//             lot_id: lotId, 
+//             vehicle_number: vehicleNumber 
+//         })
+//     })
+//     .then(res => res.json())
+//     .then(data => {
+//         if (data.error) {
+//             document.getElementById('reserveMsg').textContent = data.error;
+//         } else {
+//             document.getElementById('reserveMsg').textContent = 'Spot reserved successfully!';
+//             document.getElementById('vehicleNumber').value = '';
+//             checkActiveReservation();
+//             loadSummary();
+//             loadLots();
+//         }
+//     })
+//     .catch(error => {
+//         document.getElementById('reserveMsg').textContent = 'Error reserving spot. Please try again.';
+//     });
+// }
 
 function checkActiveReservation() {
     const userId = localStorage.getItem('user_id');
@@ -165,7 +286,7 @@ function vacateSpot() {
             document.getElementById('vacateMsg').textContent = 'Spot vacated!';
             checkActiveReservation();
             loadSummary();
-            loadLots();
+            refreshLots(); // Use refreshLots to maintain search state
         }
     });
 }

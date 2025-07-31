@@ -10,7 +10,8 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=True)  # Made nullable since we're using mobile
+    mobile_number = db.Column(db.String(10), unique=True, nullable=False)  # New mobile field
     password = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(200))
     pin_code = db.Column(db.String(10))
@@ -23,7 +24,8 @@ class User(db.Model):
 class Admin(db.Model):
     __tablename__ = 'admin'
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)  # Made nullable since we're using mobile
+    mobile_number = db.Column(db.String(10), unique=True, nullable=False)  # New mobile field
     password = db.Column(db.String(200), nullable=False)
 
 # --------------------------
@@ -34,9 +36,9 @@ class ParkingLot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     location_name = db.Column(db.String(100), nullable=False)
     address = db.Column(db.String(200), nullable=False)
-    pin_code = db.Column(db.String(10), nullable=False)
+    pin_code = db.Column(db.String(10), unique=True, nullable=False)  # Unique constraint added
     price = db.Column(db.Float, nullable=False)
-    max_spots = db.Column(db.Integer, nullable=False)
+    max_spots = db.Column(db.Integer, nullable=False, default=10)  # Default max 10 spots
 
     spots = db.relationship('ParkingSpot', backref='lot', lazy=True)
 

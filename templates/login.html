@@ -19,9 +19,9 @@
                             <div class="mb-3">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-phone-fill"></i></span>
-                                    <input type="tel" class="form-control" id="mobile" placeholder="Enter your mobile number" pattern="[0-9]{10}" required>
+                                    <input type="text" class="form-control" id="loginField" placeholder="Enter your mobile number" pattern="[0-9]{10}" required>
                                 </div>
-                                <small id="mobileError" class="text-danger"></small>
+                                <small id="loginFieldError" class="text-danger"></small>
                             </div>
                             <div class="mb-3">
                                 <div class="input-group">
@@ -63,30 +63,30 @@
         }
 
         function validateLogin() {
-            const mobileField = document.getElementById('mobile');
+            const loginField = document.getElementById('loginField');
             const passwordField = document.getElementById('password');
-            const mobileError = document.getElementById('mobileError');
+            const loginFieldError = document.getElementById('loginFieldError');
             const passwordError = document.getElementById('passwordError');
 
             let isValid = true;
 
             // Clear previous errors
-            mobileError.textContent = '';
+            loginFieldError.textContent = '';
             passwordError.textContent = '';
-            mobileField.classList.remove('is-invalid');
+            loginField.classList.remove('is-invalid');
             passwordField.classList.remove('is-invalid');
 
-            // Mobile validation
-            const mobile = mobileField.value.trim();
+            // Login field validation (mobile number)
+            const loginValue = loginField.value.trim();
             const mobileRegex = /^[0-9]{10}$/;
 
-            if (!mobile) {
-                mobileError.textContent = 'Mobile number is required';
-                mobileField.classList.add('is-invalid');
+            if (!loginValue) {
+                loginFieldError.textContent = 'Mobile number is required';
+                loginField.classList.add('is-invalid');
                 isValid = false;
-            } else if (!mobileRegex.test(mobile)) {
-                mobileError.textContent = 'Enter a valid 10-digit mobile number';
-                mobileField.classList.add('is-invalid');
+            } else if (!mobileRegex.test(loginValue)) {
+                loginFieldError.textContent = 'Enter a valid 10-digit mobile number';
+                loginField.classList.add('is-invalid');
                 isValid = false;
             }
 
@@ -111,8 +111,9 @@
             e.preventDefault();
             if (!validateLogin()) return;
 
+            const loginValue = document.getElementById('loginField').value.trim();
             const data = {
-                mobile: document.getElementById('mobile').value,
+                login_field: loginValue,
                 password: document.getElementById('password').value
             };
 
@@ -129,13 +130,13 @@
 
                 if (response.ok) {
                     if (result.user_type === 'admin') {
-                        localStorage.setItem('admin_email', result.admin_email);
-                        window.location.href = '/admin';
+                        localStorage.setItem('admin_mobile', result.mobile_number);
+                        window.location.href = result.redirect_url || '/admin';
                     } else {
-                        // Store user info and redirect to user.html
+                        // Store user info and redirect to user dashboard
                         localStorage.setItem('user_id', result.user_id);
                         localStorage.setItem('user_name', result.full_name);
-                        window.location.href = '/user.html';
+                        window.location.href = result.redirect_url || '/user';
                     }
                 } else {
                     alert(result.error || 'Login failed');
@@ -146,11 +147,12 @@
             }
         });
 
-        // Add mobile number input validation
-        const mobileInput = document.getElementById('mobile');
-        mobileInput.addEventListener('input', function() {
-            const mobileValue = this.value.replace(/\D/g, ''); // Remove non-digits
-            this.value = mobileValue.slice(0, 10); // Limit to 10 digits
+        // Restrict mobile number input to digits only
+        const loginField = document.getElementById('loginField');
+        loginField.addEventListener('input', function() {
+            // Remove non-digits and limit to 10 digits
+            const mobileValue = this.value.replace(/\D/g, '');
+            this.value = mobileValue.slice(0, 10);
         });
 
     </script>
